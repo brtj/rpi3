@@ -1,0 +1,63 @@
+Info:
+Execute python scripts on X's RPi3 using ansible
+
+Prerequisitions:
+You should have installed ansible on controll machine
+
+Instruction:
+
+1. Go to ansible path
+cd etc/ansible
+
+2. Create a python script called LED.py, script below:
+!/usr/bin/python
+import os
+import time
+os.system("echo 1 > /sys/class/leds/led0/brightness")
+os.system("echo 0 > /sys/class/leds/led1/brightness")
+time.sleep(3)
+os.system("echo 0 > /sys/class/leds/led0/brightness")
+os.system("echo 1 > /sys/class/leds/led1/brightness")
+
+3. Create playbook.yml (could be in same directory as LED.py), playbook below:
+---
+- hosts: all
+  become: true
+  tasks:
+  - name: Turn on and off Green/PWR LED of RPi3
+    script: LED.py
+
+4. Open hosts and add lines like e.g below:
+[test-srv]
+192.168.1.112
+192.168.1.120
+192.168.1.102
+192.168.1.110
+192.168.1.100
+
+[all:children]
+test-srv
+
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_user=fill_your_username
+ansible_ssh_pass=fill_your_password
+
+5. Now you ready to execute playbook but first check ping to your servers
+ansible all -m ping
+
+you should get return like e.g:
+192.168.1.110 | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+
+6. Execute playbook:
+
+a) all at once:
+ansible-playbook dioda_plbook.yml -s
+
+b) X by once: (in e.g one by one)
+ansible-playbook dioda_plbook.yml -s --forks=1
+
+
