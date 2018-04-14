@@ -1,0 +1,56 @@
+Info:
+Remotely access to Pi desktop via noVNC + dataplicity.com
+
+Prerequisites:
+Port 80 must be free.
+
+1. Register to dataplicity.com
+- provide email
+- execute command on Raspberry Pi that you want to control via www (over internet)
+e.g.: curl https://www.dataplicity.com/{{code}}.py | sudo python
+
+- after successful instalation your Rpi will be visible on dataplicity.com
+dataplicity > Devices > your device 
+- click on device and test connection 
+your RPi has been registered to dataplicity.com
+
+2. TightVNCServer installation
+- before all check updates for your RPi:
+sudo apt-get update -y
+sudo apt-get upgrade -y
+
+- install TightVNCServer
+sudo apt-get install tightvncserver
+
+-check if works:
+vncserver :1
+
+3. Install Websockify and noVNC
+- install:
+sudo apt-get install git websockify
+after that:
+git clone git://github.com/kanaka/noVNC (directory is up to you)
+
+- check if works:
+cd {{path to noVNC folder}} e.g cd /home/pi/noVNC
+./utils/launch.sh --vnc 127.0.0.1:5901 -- listen 80 &
+
+- add websockify to autostart after boot
+sudo nano /etc/rc.local
+
+add below command before exit 0
+Command to add:
+# start novnc server
+su - pi -c '/usr/bin/vncserver :1 -geometry 1280x800 -depth 24 -dpi 96'
+sudo /home/pi/noVNC/utils/launch.sh --vnc 127.0.0.1:5901 --listen 80 &
+
+now save file and exit. Restart machine and check if everything start after reboot.
+You can check using command vnc server :1, should return information that vnc server is already running
+
+4. Enable Wormhole
+- log in to your Dataplicity, open your device and on the right enable wormhole
+- open link e.g: 'https://statuary-sponge-{{numbers}}.dataplicity.io'
+- you will get directory of files click vnc.html
+- provide password that you provide when you install tightvncserver
+
+Here you go now you are on remote desktop over internet. 
