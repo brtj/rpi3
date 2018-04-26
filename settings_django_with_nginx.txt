@@ -1,0 +1,180 @@
+Info:
+Configure Django with virtualenv, PostgreSQL, gunicorn, supervisor, Nginx
+
+Prerequisites:
+Port 80 must be free.
+
+First update system
+sudo apt-get update -y && sudo apt-get upgrade -y
+
+Install PostgreSQL
+Create file /etc/apt/sources.list.d/pgdg.list
+Insert line:
+deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main
+
+Import repository signing key
+wget --quiet -O - http://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc | sudo apt-key add -
+
+Refresh repo cache
+sudo apt-get update
+
+Now you can able to install postgresql
+sudo apt-get install postgresql postgresql-contrib -y
+
+Log on as postgres
+sudo su - postgres
+createuser —interactive -P
+
+role: hello_django
+pass: django1
+superuser n / allowed to create n / more roles n
+
+createdb —-owner hello_django hello
+logout
+
+sudo groupadd --system webapps
+sudo useradd --system --gid webapps --shell /bin/bash --home /var/www/ hello
+
+Install virtualenv
+sudo apt-get install python-virtualenv -y
+
+Create and activate virtualenv
+sudo mkdir -p /var/www/
+sudo chown hello /var/www/
+sudo su - hello
+cd /var/www/
+virtualenv .
+
+Activate env and install django
+source bin/activate
+pip install django 
+
+Create empty project
+django-admin.py startproject hello
+
+you can test it is it working
+cd hello 
+python manage.py runserver localhost:8000  (if remotly substitute localhost to your IP - works in local network
+
+Logout from hello user
+exit 
+
+Allowing other users write access to the application directory
+sudo chown -R hello:users /var/www/
+sudo chmod -R g+w /var/www/
+
+If you are not member of users you can add yourself to group
+sudo usermod -a -G users ‚whoami’
+
+Configure PostgreSQL to work with Django
+Install dependencies:
+sudo apt-get install libpq-dev python-dev -y
+
+Install psycopg2 database adapter in VENV
+if virtualenv not active do
+source /bin/activate
+
+Install
+pip install psycopg2
+
+Configure databases section in settings.py
+sudo nano hello/hello/settings.py
+
+Section to edit
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'hello',
+        'USER': 'hello_django',
+        'PASSWORD': ‚django1’,
+        'HOST': 'localhost',
+        'PORT': '',                      # Set to empty string for default.
+    }
+}
+
+initial database for Django
+python hello/manage.py migrate
+
+Install gunicorn in virtualenv
+virtualenv mus be active
+
+Install
+pip install gunicorn
+
+Test gunicorn
+cd hello
+as a hello user in venv execute
+gunicorn hello.wsgi:application —bind localhost:8001 (or your ip)
+
+Gunicorn bash script
+create file
+bin/gunicorn_start
+
+Set executable bit on the script
+as a root 
+sudo chmod u+x bin/gunicorn_start
+
+Test gunicorn script
+sudo su - hello
+bin/gunicorn_start
+after test control-c
+exit
+
+Starting and monitoring with Supervisor
+sudo apt-get install supervisor -y
+
+Create configuration file 
+cd /etc/supervisor/conf.d/
+sudo nano hello.conf
+
+hello.conf 
+[program:hello]
+command = /var/www/bin/gunicorn_start                                          
+user = hello                                                          ; User to run as
+stdout_logfile = /var/www/logs/gunicorn_supervisor.log   ; Where to write log messages
+redirect_stderr = true                                                ; Save stderr in the same log
+environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8                                                      
+
+create file to store your application’s log messages
+sudo su - hello
+mkdir -p /var/www/logs/
+touch /var/www/logs/gunicorn_supervisor.log
+
+Reread configuration and update
+sudo supervisorctl reread
+sudo supervisorctl update	
+
+you can check status
+sudo supervisorctl status hello 
+
+Install Nginx 
+sudo apt-get install nginx -y && sudo service nginx start
+
+Create an Nginx virtual server configuration for Django
+sudo nano /etc/nginx/sites-available/hello
+
+Create a symbolic link in sites-enabled
+sudo ln -s /etc/nginx/sites-available/hello /etc/nginx/sites-enabled/hello
+
+Everything works
+structure of directory
+/var/www
+tree -d -I 'bin|include|lib|local|logs'
+
+.
+├── hello
+│   └── hello
+├── html
+├── run
+└── share
+    └── python-wheels
+
+
+Virtualenv requirments
+
+Django==1.11.12
+gunicorn==19.7.1
+pkg-resources==0.0.0
+psycopg2==2.7.4
+pytz==2018.4
+setproctitle==1.1.10
